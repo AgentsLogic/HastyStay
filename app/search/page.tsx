@@ -1,47 +1,22 @@
-type SearchParams = {
+import { supabase } from "@/lib/supabaseClient";
+
+export type SearchParams = {
   destination?: string | string[];
   checkin?: string | string[];
   nights?: string | string[];
 };
 
-const MOCK_STAYS = [
-  {
-    id: 1,
-    title: "Oceanfront villa with pool",
-    location: "San Diego, California",
-    nightsMin: 2,
-    nightsMax: 7,
-    pricePerNight: 448,
-    originalPricePerNight: 620,
-    guests: 8,
-    bedrooms: 4,
-    baths: 4,
-  },
-  {
-    id: 2,
-    title: "Modern downtown loft",
-    location: "Austin, Texas",
-    nightsMin: 1,
-    nightsMax: 5,
-    pricePerNight: 219,
-    originalPricePerNight: 310,
-    guests: 4,
-    bedrooms: 1,
-    baths: 1,
-  },
-  {
-    id: 3,
-    title: "Cozy lakefront cabin",
-    location: "Lake Tahoe, California",
-    nightsMin: 2,
-    nightsMax: 10,
-    pricePerNight: 329,
-    originalPricePerNight: 480,
-    guests: 6,
-    bedrooms: 3,
-    baths: 2,
-  },
-];
+export type SearchResult = {
+  id: string;
+  title: string;
+  location: string;
+  thumbnailUrl: string | null;
+  maxGuests: number;
+  bedrooms: number;
+  baths: number;
+  pricePerNight: number;
+  originalPricePerNight: number | null;
+};
 
 function normalizeParam(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -89,7 +64,100 @@ function validateParams(destination?: string, checkin?: string, nights?: number)
   return errors;
 }
 
-export default function SearchPage({ searchParams }: { searchParams: SearchParams }) {
+async function searchStaysFromSupabase(params: {
+  destination?: string;
+  checkin?: string;
+  nights?: number;
+}): Promise<SearchResult[]> {
+  const { destination, checkin, nights } = params;
+  if (!destination || !checkin || !nights) return [];
+
+  const destinationLower = destination.toLowerCase();
+
+  const { data: properties, error: propsError } = await supabase
+    .from("properties")
+    .select(
+      "id, title, location_city, location_region, location_country, max_guests, bedrooms, baths, thumbnail_url",
+    )
+    .ilike("location_city", `%${destinationLower}%`);
+
+  if (propsError) {
+    console.error("Error fetching properties", propsError);
+    return [];
+  }
+
+  if (!properties?.length) return [];
+
+  const checkinDate = new Date(checkin);
+  const nightsArray: string[] = [];
+  for (let i = 0; i < nights; i += 1) {
+    const d = new Date(checkinDate);
+    d.setDate(checkinDate.getDate() + i);
+    nightsArray.push(d.toISOString().slice(0, 10));
+  }
+
+  const { data: inventory, error: invError } = await supabase
+    .from("nightly_inventory")
+    .select("property_id, stay_date, base_rate, discounted_rate, is_available")
+    .in("stay_date", nightsArray)
+    .in(
+      "property_id",
+      properties.map((p) => p.id),
+    )
+    .eq("is_available", true);
+
+  if (invError) {
+    console.error("Error fetching inventory", invError);
+    return [];
+  }
+
+  if (!inventory?.length) return [];
+
+  const byProperty = new Map<string, typeof inventory>();
+  for (const row of inventory) {
+    const arr = byProperty.get(row.property_id) ?? [];
+    arr.push(row);
+    byProperty.set(row.property_id, arr);
+  }
+
+  const results: SearchResult[] = [];
+
+  for (const property of properties) {
+    const rows = byProperty.get(property.id) ?? [];
+    if (rows.length !== nightsArray.length) continue; // require full coverage
+
+    const first = rows[0];
+
+    const locationParts = [
+      property.location_city,
+      property.location_region,
+      property.location_country,
+    ].filter(Boolean);
+
+    const originalPricePerNight =
+      typeof first.base_rate === "number" ? first.base_rate : Number(first.base_rate ?? 0) || null;
+    const pricePerNight =
+      typeof first.discounted_rate === "number"
+        ? first.discounted_rate
+        : Number(first.discounted_rate ?? 0);
+
+    results.push({
+      id: property.id,
+      title: property.title,
+      location: locationParts.join(", "),
+      thumbnailUrl: property.thumbnail_url ?? null,
+      maxGuests: property.max_guests,
+      bedrooms: property.bedrooms,
+      baths: property.baths,
+      pricePerNight,
+      originalPricePerNight,
+    });
+  }
+
+  return results;
+}
+
+export default async function SearchPage({ searchParams }: { searchParams: SearchParams }) {
   const destination = normalizeParam(searchParams.destination);
   const checkin = normalizeParam(searchParams.checkin);
   const nights = parseNights(normalizeParam(searchParams.nights));
@@ -97,15 +165,7 @@ export default function SearchPage({ searchParams }: { searchParams: SearchParam
   const errors = validateParams(destination, checkin, nights);
 
   const results = !errors.length
-    ? MOCK_STAYS.filter((stay) => {
-        const matchesDestination = destination
-          ? stay.location.toLowerCase().includes(destination.toLowerCase())
-          : true;
-        const matchesNights = nights
-          ? nights >= stay.nightsMin && nights <= stay.nightsMax
-          : true;
-        return matchesDestination && matchesNights;
-      })
+    ? await searchStaysFromSupabase({ destination, checkin, nights })
     : [];
 
   return (
