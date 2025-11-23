@@ -50,7 +50,11 @@ export default function Home() {
             HastyStay surfaces unsold vacation rentals from trusted hosts and property managers so you can
             book incredible homes for the next 2–30 days at aggressive, automatic discounts.
           </p>
-          <form className="mt-6 grid w-full items-center gap-3 rounded-full bg-white/90 p-3 text-sm shadow-lg shadow-slate-900/10 ring-1 ring-slate-200 sm:grid-cols-[2fr_2fr_1fr_auto]">
+          <form
+            action="/search"
+            method="GET"
+            className="mt-6 grid w-full items-center gap-3 rounded-full bg-white/90 p-3 text-sm shadow-lg shadow-slate-900/10 ring-1 ring-slate-200 sm:grid-cols-[2fr_2fr_1fr_auto]"
+          >
             <div className="flex flex-col gap-1">
               <label htmlFor="destination" className="text-[11px] font-medium text-slate-700">
                 Where to?
@@ -60,6 +64,7 @@ export default function Home() {
                 name="destination"
                 className="h-11 rounded-full border border-slate-200 bg-white px-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-100"
                 placeholder="City, region, or destination"
+                required
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -71,6 +76,7 @@ export default function Home() {
                 name="checkin"
                 type="date"
                 className="h-11 rounded-full border border-slate-200 bg-white px-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-100"
+                required
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -85,10 +91,11 @@ export default function Home() {
                 max={30}
                 className="h-11 rounded-full border border-slate-200 bg-white px-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-100"
                 placeholder="2–14"
+                required
               />
             </div>
             <button
-              type="button"
+              type="submit"
               className="inline-flex h-11 items-center justify-center rounded-full bg-amber-400 px-8 text-sm font-semibold text-slate-900 shadow-md shadow-amber-500/40 transition hover:bg-amber-300"
             >
               Search
