@@ -206,9 +206,20 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
         {!errors.length && results.length > 0 && (
           <div className="grid gap-6 md:grid-cols-3">
             {results.map((stay) => {
-              const discount = Math.round(
-                ((stay.originalPricePerNight - stay.pricePerNight) / stay.originalPricePerNight) * 100,
-              );
+              let discountLine: JSX.Element | null = null;
+
+              if (stay.originalPricePerNight != null && stay.originalPricePerNight > stay.pricePerNight) {
+                const discount = Math.round(
+                  ((stay.originalPricePerNight - stay.pricePerNight) / stay.originalPricePerNight) * 100,
+                );
+
+                discountLine = (
+                  <p className="mt-1 text-xs text-emerald-600">
+                    Save {discount}% vs usual ${stay.originalPricePerNight.toLocaleString()} / night
+                  </p>
+                );
+              }
+
               return (
                 <article
                   key={stay.id}
@@ -219,9 +230,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
                   <p className="mt-3 text-base font-semibold text-slate-900">
                     ${stay.pricePerNight.toLocaleString()} <span className="text-xs font-normal text-slate-500">/night</span>
                   </p>
-                  <p className="mt-1 text-xs text-emerald-600">
-                    Save {discount}% vs usual ${stay.originalPricePerNight.toLocaleString()} / night
-                  </p>
+                  {discountLine}
                   <p className="mt-3 text-xs text-slate-500">
                     {stay.bedrooms} bd • {stay.baths} ba • up to {stay.guests} guests
                   </p>
