@@ -206,7 +206,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
         {!errors.length && results.length > 0 && (
           <div className="grid gap-6 md:grid-cols-3">
             {results.map((stay) => {
-              let discountLine: JSX.Element | null = null;
+              let discountLine = null;
 
               if (stay.originalPricePerNight != null && stay.originalPricePerNight > stay.pricePerNight) {
                 const discount = Math.round(
@@ -232,7 +232,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
                   </p>
                   {discountLine}
                   <p className="mt-3 text-xs text-slate-500">
-                    {stay.bedrooms} bd • {stay.baths} ba • up to {stay.guests} guests
+                    {stay.bedrooms} bd • {stay.baths} ba • up to {stay.maxGuests} guests
                   </p>
                 </article>
               );
