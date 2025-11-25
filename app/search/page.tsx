@@ -192,9 +192,20 @@ async function searchStaysFromSupabase(params: {
 }
 
 export default async function SearchPage({ searchParams }: { searchParams: SearchParams }) {
-  const destination = normalizeParam(searchParams.destination);
-  const checkin = normalizeParam(searchParams.checkin);
-  const nights = parseNights(normalizeParam(searchParams.nights));
+  const rawDestination = normalizeParam(searchParams.destination);
+  const rawCheckin = normalizeParam(searchParams.checkin);
+  const rawNights = normalizeParam(searchParams.nights);
+
+  // If the user doesn't pick dates or nights, default like a typical travel site
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const defaultCheckin = today.toISOString().slice(0, 10);
+
+  const destination = rawDestination;
+  const checkin = rawCheckin ?? defaultCheckin;
+
+  const nights = rawNights ? parseNights(rawNights) : 3;
+
   const minPrice = parseOptionalNumber(normalizeParam(searchParams.minPrice), 0);
   const maxPrice = parseOptionalNumber(normalizeParam(searchParams.maxPrice), 0);
   const guests = parseOptionalNumber(normalizeParam(searchParams.guests), 1);
